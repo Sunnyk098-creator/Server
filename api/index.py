@@ -4,7 +4,7 @@ import asyncio
 import urllib.request
 import urllib.parse
 from flask import Flask, request, jsonify
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 
 app = Flask(__name__)
@@ -12,7 +12,6 @@ app = Flask(__name__)
 # Aapka purana Token
 BOT_TOKEN = "8416519129:AAHfVrOHd8V8FUMSCQC3w1NbMKA5sv0qSU8"
 
-# Vercel setup ke liye global app
 tg_app = None
 
 def get_tg_app():
@@ -20,31 +19,49 @@ def get_tg_app():
     if not tg_app:
         tg_app = ApplicationBuilder().token(BOT_TOKEN).build()
         
-        # /start command handler
-        async def start_handler(update: Update, context):
-            # 4 buttons wala Keyboard
-            keyboard = [['1', '2'], ['3', '4']]
-            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-            await update.message.reply_text("Ek number select karein:", reply_markup=reply_markup)
+        def get_custom_keyboard():
+            # 5 Buttons ka 2-1-2 Layout
+            keyboard = [
+                [KeyboardButton("Laugh" , style="danger"), KeyboardButton("Cool")],
+                [KeyboardButton("Rocket")],
+                [KeyboardButton("Fire"), KeyboardButton("Star")]
+            ]
+            return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-        # Message handler (Buttons dabane par emojis bhejne ke liye)
+        async def start_handler(update: Update, context):
+            await update.message.reply_text("Ek emoji name select karein:", reply_markup=get_custom_keyboard())
+
+        # /maker command handler
+        async def maker_handler(update: Update, context):
+            maker_text = """⚡️ Pʏᴛʜᴏɴ Mᴀᴋᴇʀ
+
+━━━━━━━━━━━━━━━━━━━
+👨‍💻 Mᴀᴅᴇ Bʏ : Sᴜɴɴʏ
+🖥️ Hᴏsᴛᴇᴅ Oɴ : Pʀɪᴠᴀᴛᴇ Sᴇʀᴠᴇʀ
+🐍 Rᴜɴɴɪɴɢ Oɴ : Pʏᴛʜᴏɴ 3
+⚡️ Sᴛᴀᴛᴜs : Oɴʟɪɴᴇ 🟢
+━━━━━━━━━━━━━━━━━━━"""
+            await update.message.reply_text(maker_text)
+
+        # Message handler for emojis
         async def message_handler(update: Update, context):
             text = update.message.text
             
-            # Emojis assign kiye gaye hain
-            if text == '1':
+            if text == 'Laugh':
                 await update.message.reply_text("😂")
-            elif text == '2':
+            elif text == 'Cool':
                 await update.message.reply_text("😎")
-            elif text == '3':
-                await update.message.reply_text("🔥")
-            elif text == '4':
+            elif text == 'Rocket':
                 await update.message.reply_text("🚀")
+            elif text == 'Fire':
+                await update.message.reply_text("🔥")
+            elif text == 'Star':
+                await update.message.reply_text("⭐")
             else:
-                await update.message.reply_text("Kripya keyboard se 1, 2, 3 ya 4 select karein.")
+                await update.message.reply_text("Kripya keyboard se koi option select karein.")
 
-        # Handlers ko bot me add karna
         tg_app.add_handler(CommandHandler("start", start_handler))
+        tg_app.add_handler(CommandHandler("maker", maker_handler))
         tg_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
         
     return tg_app
@@ -68,7 +85,7 @@ def control():
         info = tg_request("getWebhookInfo")
         webhook_url = info.get("result", {}).get("url", "")
         return jsonify({
-            "bot_name": "Emoji Bot",
+            "bot_name": "Emoji & Maker Bot",
             "is_running": bool(webhook_url),
             "webhook_url": webhook_url
         })
