@@ -9,10 +9,11 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 
 app = Flask(__name__)
 
+# Apna Token aur Admin ID yahan daalein
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8416519129:AAHfVrOHd8V8FUMSCQC3w1NbMKA5sv0qSU8")
 MAIN_ADMIN_ID = 8522410574
 
-# Vercel (Serverless) me memory bachane ke liye Bot ko lazy-load karenge
+# Vercel Memory ke liye global app variable
 tg_app = None
 
 def get_tg_app():
@@ -53,9 +54,11 @@ def get_tg_app():
             else:
                 await update.message.reply_text("Please use the keyboard menu.")
 
+        # Handlers Add Karein
         tg_app.add_handler(CommandHandler("start", start_handler))
         tg_app.add_handler(CommandHandler("adminpanel", admin_handler))
         tg_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+        
     return tg_app
 
 def tg_request(method, params=None):
@@ -68,8 +71,6 @@ def tg_request(method, params=None):
             return json.loads(res.read().decode('utf-8'))
     except Exception as e:
         return {"ok": False, "error": str(e)}
-
-# --- FLASK ROUTES FOR VERCEL ---
 
 @app.route('/api/bot_control', methods=['GET', 'POST'])
 def control():
@@ -102,15 +103,15 @@ def webhook():
         telegram_app = get_tg_app()
         update = Update.de_json(update_data, telegram_app.bot)
         
-        # Async run for serverless
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(telegram_app.process_update(update))
-        loop.close()
-        
+        # Perfect Async Execution for Vercel Serverless
+        async def process_update():
+            async with telegram_app:
+                await telegram_app.process_update(update)
+                
+        asyncio.run(process_update())
         return jsonify({"status": "ok"})
+        
     except Exception as e:
-        # Error aane par ab Vercel HTML nahi, balki JSON error dega
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-# Vercel requires the app to be named 'app'
+        print(f"WEBHOOK ERROR: {e}")
+        # Telegram ko 200 hi bhejna hai taaki wo retry na kare
+        return jsonify({"status": "error", "message": str(e)}), 200
