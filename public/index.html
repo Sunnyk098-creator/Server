@@ -27,7 +27,7 @@
     .btn-stop:hover:not(:disabled) { background: #ef4444; }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    .details-box { background: #030712; border: 1px solid #1f2937; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 13px; color: #9ca3af; line-height: 1.6; }
+    .details-box { background: #030712; border: 1px solid #1f2937; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 13px; color: #9ca3af; line-height: 1.6; word-break: break-all; }
     .highlight { color: #38bdf8; }
   </style>
 </head>
@@ -74,13 +74,13 @@
         statusText.innerText = 'ONLINE (24/7)';
         btnStart.disabled = true;
         btnStop.disabled = false;
-        infoConsole.innerHTML = `🟢 <b>Server is Active!</b><br>Webhook URL: <span class="highlight">${data.webhook_url}</span><br>Bot 24/7 requests receive karne ke liye ready hai.`;
+        infoConsole.innerHTML = `🟢 <b>Server is Active!</b><br>Webhook URL: <span class="highlight">${data.webhook_url}</span><br><br>Bot is ready to receive requests 24/7.`;
       } else {
         statusBadge.className = 'status-badge offline';
         statusText.innerText = 'STOPPED';
         btnStart.disabled = false;
         btnStop.disabled = true;
-        infoConsole.innerHTML = `🔴 <b>Server is Stopped.</b><br>Webhook disconnected hai. Start Server par click karein.`;
+        infoConsole.innerHTML = `🔴 <b>Server is Stopped.</b><br>Click 'Start Server' to bind the Telegram Webhook.`;
       }
     } catch (e) {
       infoConsole.innerText = "Error loading status: " + e.message;
@@ -98,7 +98,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: action, domain: window.location.origin })
       });
-      setTimeout(checkStatus, 1000);
+      setTimeout(checkStatus, 1500);
     } catch(e) {
       infoConsole.innerText = "Action failed: " + e.message;
     }
