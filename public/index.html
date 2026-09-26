@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tasks Payment Bot Server Manager</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0b0f19; color: #f3f4f6; min-height: 100vh; padding: 20px; display: flex; justify-content: center; align-items: center; }
+    .container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 16px; }
+    .card { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 22px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .bot-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .bot-info h1 { font-size: 20px; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
+    .bot-info p { font-size: 13px; color: #9ca3af; margin-top: 4px; }
+    
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .status-badge.online { background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .status-badge.offline { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .online .dot { box-shadow: 0 0 8px #22c55e; }
+
+    .controls { display: flex; gap: 12px; margin-top: 18px; }
+    button { flex: 1; padding: 14px; font-size: 15px; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s ease; }
+    .btn-start { background: #059669; color: white; }
+    .btn-start:hover:not(:disabled) { background: #10b981; }
+    .btn-stop { background: #dc2626; color: white; }
+    .btn-stop:hover:not(:disabled) { background: #ef4444; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .details-box { background: #030712; border: 1px solid #1f2937; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 13px; color: #9ca3af; line-height: 1.6; }
+    .highlight { color: #38bdf8; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card">
+    <div class="bot-header">
+      <div class="bot-info">
+        <h1 id="botTitle">🤖 Tasks Payment Bot</h1>
+        <p>Main Owner: <span class="highlight">8522410574</span> | Architecture: <span class="highlight">Vercel Serverless</span></p>
+      </div>
+      <div id="statusBadge" class="status-badge offline">
+        <span class="dot"></span>
+        <span id="statusText">STOPPED</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="btnStart" class="btn-start" onclick="toggleServer('start')">▶ Start Server</button>
+      <button id="btnStop" class="btn-stop" onclick="toggleServer('stop')" disabled>⏹ Stop Server</button>
+    </div>
+  </div>
+
+  <div class="card details-box" id="infoConsole">
+    Connecting to Vercel bot control API...
+  </div>
+</div>
+
+<script>
+  const statusBadge = document.getElementById('statusBadge');
+  const statusText = document.getElementById('statusText');
+  const btnStart = document.getElementById('btnStart');
+  const btnStop = document.getElementById('btnStop');
+  const infoConsole = document.getElementById('infoConsole');
+
+  async function checkStatus() {
+    try {
+      const res = await fetch('/api/bot_control');
+      const data = await res.json();
+
+      if (data.is_running) {
+        statusBadge.className = 'status-badge online';
+        statusText.innerText = 'ONLINE (24/7)';
+        btnStart.disabled = true;
+        btnStop.disabled = false;
+        infoConsole.innerHTML = `🟢 <b>Server is Active!</b><br>Webhook URL: <span class="highlight">${data.webhook_url}</span><br>Bot 24/7 requests receive karne ke liye ready hai.`;
+      } else {
+        statusBadge.className = 'status-badge offline';
+        statusText.innerText = 'STOPPED';
+        btnStart.disabled = false;
+        btnStop.disabled = true;
+        infoConsole.innerHTML = `🔴 <b>Server is Stopped.</b><br>Webhook disconnected hai. Start Server par click karein.`;
+      }
+    } catch (e) {
+      infoConsole.innerText = "Error loading status: " + e.message;
+    }
+  }
+
+  async function toggleServer(action) {
+    btnStart.disabled = true;
+    btnStop.disabled = true;
+    infoConsole.innerText = `Processing ${action} request...`;
+
+    try {
+      await fetch('/api/bot_control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: action, domain: window.location.origin })
+      });
+      setTimeout(checkStatus, 1000);
+    } catch(e) {
+      infoConsole.innerText = "Action failed: " + e.message;
+    }
+  }
+
+  checkStatus();
+</script>
+</body>
+</html>
