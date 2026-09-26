@@ -22,7 +22,7 @@ def get_tg_app():
         def get_custom_keyboard():
             # 5 Buttons ka 2-1-2 Layout
             keyboard = [
-                [KeyboardButton("Laugh" , style="danger"), KeyboardButton("Cool")],
+                [KeyboardButton("Laugh"), KeyboardButton("Cool")],
                 [KeyboardButton("Rocket")],
                 [KeyboardButton("Fire"), KeyboardButton("Star")]
             ]
