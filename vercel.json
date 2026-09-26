@@ -1,12 +1,7 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "api/webhook.py", "use": "@vercel/python" },
-    { "src": "api/bot_control.py", "use": "@vercel/python" }
-  ],
-  "routes": [
-    { "src": "/api/webhook", "dest": "api/webhook.py" },
-    { "src": "/api/bot_control", "dest": "api/bot_control.py" },
-    { "src": "/(.*)", "dest": "/public/$1" }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.py" },
+    { "source": "/(.*)", "destination": "/public/index.html" }
   ]
 }
