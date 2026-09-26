@@ -38,20 +38,14 @@ async def message_handler(update: Update, context):
     if text == "👤 My Account":
         kb = [
             [InlineKeyboardButton("➕ Add Fund", callback_data="usr_addf")],
-            [InlineKeyboardButton("🪪 Balance Records", callback_data="usr_tx_page_0"), InlineKeyboardButton("📄 Withdrawal History", callback_data="usr_wd_page_0")],
+            [InlineKeyboardButton("🪪 Balance Records", callback_data="usr_tx_page_0")],
             [InlineKeyboardButton("📞 Support", callback_data="usr_support")]
         ]
-        await update.message.reply_text(f"🚀 Wallet Summary\n\n👤 User ID -> {uid}\n💸 Balance : ₹0.00\n🔐 Keeper Balance : ₹0.00", reply_markup=InlineKeyboardMarkup(kb))
+        await update.message.reply_text(f"🚀 Wallet Summary\n\n👤 User ID -> {uid}\n💸 Balance : ₹0.00", reply_markup=InlineKeyboardMarkup(kb))
     elif text == "📋 Task section":
-        await update.message.reply_text("⚠️ No tasks available right now. Please check back later!")
-    elif text == "🚀 Withdraw":
-        await update.message.reply_text("👇🏻 Send Your UPI ID Or Wallet Number To Initiate Withdrawal:")
-    elif text == "🎉 Pay to User":
-        await update.message.reply_text("🆔 Please enter the User ID(s) you want to pay:\n👉 Example: `8522410574 50`", parse_mode="Markdown")
-    elif text == "🎁 Gift Code":
-        await update.message.reply_text("🔍 You don’t have any active Gift Codes.\n\nCreate your first one now!")
-    elif text == "🛒 Buy Gift Card":
-        await update.message.reply_text("🚫 No gift card available right now.")
+        await update.message.reply_text("⚠️ No tasks available right now.")
+    else:
+        await update.message.reply_text("Please use the keyboard menu.")
 
 app.add_handler(CommandHandler("start", start_handler))
 app.add_handler(CommandHandler("adminpanel", admin_handler))
@@ -70,14 +64,12 @@ def tg_request(method, params=None):
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # /api/bot_control path saathi
         info = tg_request("getWebhookInfo")
         webhook_url = info.get("result", {}).get("url", "")
         is_running = bool(webhook_url)
 
         res_data = {
             "bot_name": "Tasks Payment Bot",
-            "admin_id": MAIN_ADMIN_ID,
             "is_running": is_running,
             "webhook_url": webhook_url
         }
@@ -91,8 +83,7 @@ class handler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length)
 
-        # Webhook kiva Control Action olkha
-        if "/api/webhook" in self.path or self.path == "/api/":
+        if "webhook" in self.path:
             try:
                 update_data = json.loads(post_data.decode('utf-8'))
                 update = Update.de_json(update_data, app.bot)
@@ -110,15 +101,13 @@ class handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(str(e).encode('utf-8'))
         else:
-            # Bot control (Start / Stop Webhook)
             try:
                 body = json.loads(post_data.decode('utf-8'))
                 action = body.get("action")
                 domain = body.get("domain", "").rstrip('/')
 
                 if action == "start":
-                    webhook_url = f"{domain}/api/webhook"
-                    res = tg_request("setWebhook", {"url": webhook_url})
+                    res = tg_request("setWebhook", {"url": f"{domain}/api/webhook"})
                 elif action == "stop":
                     res = tg_request("deleteWebhook")
                 else:
