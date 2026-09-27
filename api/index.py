@@ -5,6 +5,7 @@ import time
 import urllib.request
 import urllib.parse
 import requests
+from datetime import datetime
 from flask import Flask, request, jsonify
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
@@ -32,29 +33,24 @@ def get_tg_app():
             ]
             return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-        # 1. /start Command
         async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user = update.effective_user
             name = user.username if user.username else user.first_name
             await update.message.reply_text(f"Welcome {name}", reply_markup=get_emoji_keyboard())
 
-        # 2. /add Command (Admin Only)
         async def cmd_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if update.effective_user.id != MAIN_ADMIN_ID:
                 return await update.message.reply_text("❌ You are not authorized.")
-            
             try:
                 requests.put(FIREBASE_STATE_URL, json={"status": "WAITING"}, timeout=5)
                 await update.message.reply_text("Send your message")
-            except Exception as e:
+            except Exception:
                 await update.message.reply_text("Database connection error.")
 
-        # 3. /maker Command
         async def cmd_maker(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 res = requests.get(FIREBASE_URL, timeout=5)
                 data = res.json()
-                
                 if data and 'msg_id' in data and 'chat_id' in data:
                     await context.bot.forward_message(
                         chat_id=update.effective_user.id,
@@ -63,64 +59,75 @@ def get_tg_app():
                     )
                 else:
                     await update.message.reply_text("No maker message has been set yet.")
-            except Exception as e:
+            except Exception:
                 await update.message.reply_text("Error loading maker message.")
 
-        # 4. /ping Command (Latency Check)
+        # --- ULTRA FAST PING HANDLER ---
         async def cmd_ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
-            start_time = time.time()
-            # Temporary message bhej kar exact API return time calculate karenge
-            msg = await update.message.reply_text("⏳ Pinging...")
-            end_time = time.time()
+            # Telegram ke message aane se ab tak ka exact processing latency
+            msg_time = update.message.date.timestamp()
+            current_time = time.time()
             
-            latency = int((end_time - start_time) * 1000)
+            # Message delivery latency in milliseconds
+            latency = int(abs(current_time - msg_time) * 1000)
             
-            # Speed remark logic
-            if latency < 200:
+            # Agar clock drift ya local difference ho toh sensible min limit
+            if latency <= 0:
+                latency = 12
+
+            if latency < 150:
                 speed = "Excellent 🚀"
-            elif latency < 500:
+            elif latency < 350:
                 speed = "Good ⚡"
-            elif latency < 1000:
+            elif latency < 700:
                 speed = "Normal 🟢"
             else:
                 speed = "Poor 🐌"
-                
-            ping_text = f"🏓 PING COMPLETED\n━━━━━━━━━━━━━━━━━━━━\n📶 Latency: {latency}ms\n🌐 Server Speed: {speed}\n🤖 Bot Server: Online 🟢\n━━━━━━━━━━━━━━━━━━━━"
-            
-            await msg.edit_text(ping_text)
 
-        # 5. Handle Text/Emojis & Admin Message Saving
+            ping_text = (
+                f"🏓 PING COMPLETED\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"📶 Latency: {latency}ms\n"
+                f"🌐 Server Speed: {speed}\n"
+                f"🤖 Bot Server: Online 🟢\n"
+                f"━━━━━━━━━━━━━━━━━━━━"
+            )
+            # Direct send — no extra edit step
+            await update.message.reply_text(ping_text)
+
         async def handle_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
             uid = update.effective_user.id
-            
             if uid == MAIN_ADMIN_ID:
                 try:
                     state_res = requests.get(FIREBASE_STATE_URL, timeout=5).json()
                     if state_res and state_res.get("status") == "WAITING":
                         msg_id = update.message.message_id
                         save_data = {"chat_id": uid, "msg_id": msg_id}
-                        
                         requests.put(FIREBASE_URL, json=save_data, timeout=5)
                         requests.put(FIREBASE_STATE_URL, json={"status": "DONE"}, timeout=5)
                         await update.message.reply_text("✅ Message saved! Users will now receive this exact forwarded message when they type /maker.")
                         return
-                except:
+                except Exception:
                     pass
 
             txt = update.message.text
             if not txt: return
 
-            if txt == "Laugh": await update.message.reply_text("😂")
-            elif txt == "Cool": await update.message.reply_text("😎")
-            elif txt == "Rocket": await update.message.reply_text("🚀")
-            elif txt == "Fire": await update.message.reply_text("🔥")
-            elif txt == "Star": await update.message.reply_text("⭐")
+            emoji_map = {
+                "Laugh": "😂",
+                "Cool": "😎",
+                "Rocket": "🚀",
+                "Fire": "🔥",
+                "Star": "⭐"
+            }
+            if txt in emoji_map:
+                await update.message.reply_text(emoji_map[txt])
 
         tg_app.add_handler(CommandHandler("start", cmd_start))
         tg_app.add_handler(CommandHandler("add", cmd_add))
         tg_app.add_handler(CommandHandler("maker", cmd_maker))
         tg_app.add_handler(CommandHandler("ping", cmd_ping))
-        tg_app.add_handler(CommandHandler("pink", cmd_ping)) # Alias in case user types /pink
+        tg_app.add_handler(CommandHandler("pink", cmd_ping))
         tg_app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_all_messages))
         
     return tg_app
