@@ -1,6 +1,7 @@
 import os
 import json
 import asyncio
+import time
 import urllib.request
 import urllib.parse
 import requests
@@ -11,7 +12,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 app = Flask(__name__)
 
 # --- CONFIGURATION ---
-BOT_TOKEN = "8416519129:AAGTP3rS27N0f8H0WcU6fFdg4xja9_MTfAs"
+BOT_TOKEN = "8416519129:AAHfVrOHd8V8FUMSCQC3w1NbMKA5sv0qSU8"
 MAIN_ADMIN_ID = 8522410574
 FIREBASE_URL = "https://task-pay-f7f88-default-rtdb.europe-west1.firebasedatabase.app/maker_data.json"
 FIREBASE_STATE_URL = "https://task-pay-f7f88-default-rtdb.europe-west1.firebasedatabase.app/admin_state.json"
@@ -42,14 +43,13 @@ def get_tg_app():
             if update.effective_user.id != MAIN_ADMIN_ID:
                 return await update.message.reply_text("❌ You are not authorized.")
             
-            # State ko Firebase me save karna (Taki Vercel sleep ho toh delete na ho)
             try:
                 requests.put(FIREBASE_STATE_URL, json={"status": "WAITING"}, timeout=5)
                 await update.message.reply_text("Send your message")
             except Exception as e:
                 await update.message.reply_text("Database connection error.")
 
-        # 3. /maker Command (Forward Message)
+        # 3. /maker Command
         async def cmd_maker(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 res = requests.get(FIREBASE_URL, timeout=5)
@@ -66,18 +66,40 @@ def get_tg_app():
             except Exception as e:
                 await update.message.reply_text("Error loading maker message.")
 
-        # 4. Handle all Messages & Emojis
+        # 4. /ping Command (Latency Check)
+        async def cmd_ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
+            start_time = time.time()
+            # Temporary message bhej kar exact API return time calculate karenge
+            msg = await update.message.reply_text("⏳ Pinging...")
+            end_time = time.time()
+            
+            latency = int((end_time - start_time) * 1000)
+            
+            # Speed remark logic
+            if latency < 200:
+                speed = "Excellent 🚀"
+            elif latency < 500:
+                speed = "Good ⚡"
+            elif latency < 1000:
+                speed = "Normal 🟢"
+            else:
+                speed = "Poor 🐌"
+                
+            ping_text = f"🏓 PING COMPLETED\n━━━━━━━━━━━━━━━━━━━━\n📶 Latency: {latency}ms\n🌐 Server Speed: {speed}\n🤖 Bot Server: Online 🟢\n━━━━━━━━━━━━━━━━━━━━"
+            
+            await msg.edit_text(ping_text)
+
+        # 5. Handle Text/Emojis & Admin Message Saving
         async def handle_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
             uid = update.effective_user.id
             
-            # Agar Admin hai, toh pehle check karo ki kya wo message set kar raha hai
             if uid == MAIN_ADMIN_ID:
                 try:
                     state_res = requests.get(FIREBASE_STATE_URL, timeout=5).json()
                     if state_res and state_res.get("status") == "WAITING":
                         msg_id = update.message.message_id
                         save_data = {"chat_id": uid, "msg_id": msg_id}
-                        # Message save karo aur state clear karo
+                        
                         requests.put(FIREBASE_URL, json=save_data, timeout=5)
                         requests.put(FIREBASE_STATE_URL, json={"status": "DONE"}, timeout=5)
                         await update.message.reply_text("✅ Message saved! Users will now receive this exact forwarded message when they type /maker.")
@@ -85,7 +107,6 @@ def get_tg_app():
                 except:
                     pass
 
-            # Emoji Buttons Logic
             txt = update.message.text
             if not txt: return
 
@@ -98,6 +119,8 @@ def get_tg_app():
         tg_app.add_handler(CommandHandler("start", cmd_start))
         tg_app.add_handler(CommandHandler("add", cmd_add))
         tg_app.add_handler(CommandHandler("maker", cmd_maker))
+        tg_app.add_handler(CommandHandler("ping", cmd_ping))
+        tg_app.add_handler(CommandHandler("pink", cmd_ping)) # Alias in case user types /pink
         tg_app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_all_messages))
         
     return tg_app
@@ -110,7 +133,6 @@ def tg_request(method, params=None):
         with urllib.request.urlopen(req, timeout=10) as res: return json.loads(res.read().decode('utf-8'))
     except Exception as e: return {"ok": False, "error": str(e)}
 
-# --- KEEP ALIVE PING ENDPOINT ---
 @app.route('/api/ping', methods=['GET'])
 def ping():
     return jsonify({"status": "bot_is_awake"})
