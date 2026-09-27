@@ -1,110 +1,173 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tasks Payment Bot Server Manager</title>
+  <title>Cloud Server Management Console</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: #0b0f19; color: #f3f4f6; min-height: 100vh; padding: 20px; display: flex; justify-content: center; align-items: center; }
-    .container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 16px; }
-    .card { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 22px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-    .bot-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-    .bot-info h1 { font-size: 20px; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
-    .bot-info p { font-size: 13px; color: #9ca3af; margin-top: 4px; }
+    :root {
+      --bg-color: #0d1117;
+      --card-bg: #161b22;
+      --border-color: #30363d;
+      --text-main: #c9d1d9;
+      --text-muted: #8b949e;
+      --accent-blue: #58a6ff;
+      --success-green: #238636;
+      --danger-red: #da3633;
+    }
     
-    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-    .status-badge.online { background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); }
-    .status-badge.offline { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-    .online .dot { box-shadow: 0 0 8px #22c55e; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; }
+    
+    /* Header */
+    .header { background-color: var(--card-bg); border-bottom: 1px solid var(--border-color); padding: 20px 30px; }
+    .header h1 { font-size: 22px; font-weight: 600; color: #ffffff; letter-spacing: 0.5px; }
+    .header p { font-size: 13px; color: var(--text-muted); margin-top: 5px; }
+    
+    .container { display: flex; flex: 1; overflow: hidden; padding: 20px; gap: 20px; max-width: 1400px; margin: 0 auto; width: 100%; }
+    
+    /* Bot List Table */
+    .bot-section { flex: 1; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px; display: flex; flex-direction: column; overflow: hidden; }
+    .section-title { padding: 15px 20px; border-bottom: 1px solid var(--border-color); font-size: 14px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); background: #0d1117; }
+    
+    .table-container { overflow-y: auto; flex: 1; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 12px 20px; border-bottom: 1px solid var(--border-color); font-size: 14px; }
+    th { color: var(--text-muted); font-weight: 500; position: sticky; top: 0; background: var(--card-bg); z-index: 10; }
+    td.bot-name { font-weight: 600; color: var(--accent-blue); }
+    
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
+    .status-online { background: rgba(35, 134, 54, 0.1); color: #3fb950; border-color: rgba(63, 185, 80, 0.4); }
+    .status-offline { background: rgba(218, 54, 51, 0.1); color: #ff7b72; border-color: rgba(255, 123, 114, 0.4); }
+    
+    .action-btn { padding: 6px 12px; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-start { background-color: var(--success-green); color: #ffffff; }
+    .btn-start:hover:not(:disabled) { background-color: #2ea043; }
+    .btn-stop { background-color: transparent; border: 1px solid var(--danger-red); color: #ff7b72; }
+    .btn-stop:hover:not(:disabled) { background-color: var(--danger-red); color: #ffffff; }
+    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    .controls { display: flex; gap: 12px; margin-top: 18px; }
-    button { flex: 1; padding: 14px; font-size: 15px; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s ease; }
-    .btn-start { background: #059669; color: white; }
-    .btn-start:hover:not(:disabled) { background: #10b981; }
-    .btn-stop { background: #dc2626; color: white; }
-    .btn-stop:hover:not(:disabled) { background: #ef4444; }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .details-box { background: #030712; border: 1px solid #1f2937; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 13px; color: #9ca3af; line-height: 1.6; word-break: break-all; }
-    .highlight { color: #38bdf8; }
+    /* Terminal Console */
+    .terminal-section { flex: 1; background: #010409; border: 1px solid var(--border-color); border-radius: 6px; display: flex; flex-direction: column; }
+    .terminal-output { flex: 1; padding: 15px; overflow-y: auto; font-family: "Courier New", Courier, monospace; font-size: 13px; line-height: 1.6; color: #3fb950; white-space: pre-wrap; word-wrap: break-word; }
+    .log-system { color: var(--accent-blue); }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <div class="card">
-    <div class="bot-header">
-      <div class="bot-info">
-        <h1 id="botTitle">🤖 Tasks Payment Bot</h1>
-        <p>Main Owner: <span class="highlight">8522410574</span> | Architecture: <span class="highlight">Vercel Serverless</span></p>
-      </div>
-      <div id="statusBadge" class="status-badge offline">
-        <span class="dot"></span>
-        <span id="statusText">STOPPED</span>
+  <div class="header">
+    <h1>Cloud Server Management Console</h1>
+    <p>Repository Synchronization Active | Multiple Process Support Enabled</p>
+  </div>
+
+  <div class="container">
+    <!-- Active Bots Table -->
+    <div class="bot-section">
+      <div class="section-title">Deployed Bot Scripts</div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Script Name</th>
+              <th>Process ID</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="botTableBody">
+            <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Scanning repository for scripts...</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <div class="controls">
-      <button id="btnStart" class="btn-start" onclick="toggleServer('start')">▶ Start Server</button>
-      <button id="btnStop" class="btn-stop" onclick="toggleServer('stop')" disabled>⏹ Stop Server</button>
-    </div>
-  </div>
-
-  <div class="card details-box" id="infoConsole">
-    Connecting to Vercel bot control API...
-  </div>
+    <!-- Live Terminal -->
+    <div class="terminal-section">
+      <div class="section-title" style="display: flex; justify-content: space-between;">
+        <span>System Terminal Logs</span>
+        <span style="cursor: pointer; color: var(--accent-blue);" onclick="clearLogs()">Clear Console</span>
+      </div>
+      <div class="terminal-output" id="terminal">Initializing connection to host server...
 </div>
+    </div>
+  </div>
 
-<script>
-  const statusBadge = document.getElementById('statusBadge');
-  const statusText = document.getElementById('statusText');
-  const btnStart = document.getElementById('btnStart');
-  const btnStop = document.getElementById('btnStop');
-  const infoConsole = document.getElementById('infoConsole');
+  <script>
+    const terminal = document.getElementById('terminal');
+    const tableBody = document.getElementById('botTableBody');
 
-  async function checkStatus() {
-    try {
-      const res = await fetch('/api/bot_control');
-      const data = await res.json();
+    // Fetch and display all .py files
+    async function loadBots() {
+      try {
+        const res = await fetch('/api/bots');
+        const data = await res.json();
+        
+        tableBody.innerHTML = '';
+        if(data.bots.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No Python scripts found in repository.</td></tr>';
+          return;
+        }
 
-      if (data.is_running) {
-        statusBadge.className = 'status-badge online';
-        statusText.innerText = 'ONLINE (24/7)';
-        btnStart.disabled = true;
-        btnStop.disabled = false;
-        infoConsole.innerHTML = `🟢 <b>Server is Active!</b><br>Webhook URL: <span class="highlight">${data.webhook_url}</span><br><br>Bot is ready to receive requests 24/7.`;
-      } else {
-        statusBadge.className = 'status-badge offline';
-        statusText.innerText = 'STOPPED';
-        btnStart.disabled = false;
-        btnStop.disabled = true;
-        infoConsole.innerHTML = `🔴 <b>Server is Stopped.</b><br>Click 'Start Server' to bind the Telegram Webhook.`;
+        data.bots.forEach(bot => {
+          const tr = document.createElement('tr');
+          
+          // Status classes
+          const statusClass = bot.running ? 'status-online' : 'status-offline';
+          const statusText = bot.running ? 'ONLINE' : 'OFFLINE';
+          
+          tr.innerHTML = `
+            <td class="bot-name">${bot.name}</td>
+            <td>${bot.pid}</td>
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            <td style="display: flex; gap: 8px;">
+              <button class="action-btn btn-start" onclick="toggleBot('start', '${bot.name}')" ${bot.running ? 'disabled' : ''}>Start</button>
+              <button class="action-btn btn-stop" onclick="toggleBot('stop', '${bot.name}')" ${!bot.running ? 'disabled' : ''}>Stop</button>
+            </td>
+          `;
+          tableBody.appendChild(tr);
+        });
+      } catch(e) {
+        console.error("Error loading bots");
       }
-    } catch (e) {
-      infoConsole.innerText = "Error loading status: " + e.message;
     }
-  }
 
-  async function toggleServer(action) {
-    btnStart.disabled = true;
-    btnStop.disabled = true;
-    infoConsole.innerText = `Processing ${action} request...`;
-
-    try {
-      await fetch('/api/bot_control', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: action, domain: window.location.origin })
-      });
-      setTimeout(checkStatus, 1500);
-    } catch(e) {
-      infoConsole.innerText = "Action failed: " + e.message;
+    async function toggleBot(action, botName) {
+      try {
+        await fetch(`/api/${action}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bot_name: botName })
+        });
+        setTimeout(loadBots, 1000);
+      } catch(e) {
+        alert("Operation failed: " + e.message);
+      }
     }
-  }
 
-  checkStatus();
-</script>
+    function clearLogs() {
+      terminal.innerHTML = '';
+    }
+
+    function connectSocket() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const socket = new WebSocket(`${protocol}//${location.host}/ws/logs`);
+      
+      socket.onopen = () => { terminal.innerHTML += "<span class='log-system'>[SYSTEM] WebSocket Connection Established.</span>\n"; };
+      socket.onmessage = (e) => {
+        let msg = e.data;
+        if(msg.includes("[SYSTEM]")) {
+          msg = `<span class="log-system">${msg}</span>`;
+        }
+        terminal.innerHTML += msg;
+        terminal.scrollTop = terminal.scrollHeight;
+      };
+      socket.onclose = () => { setTimeout(connectSocket, 2000); };
+    }
+
+    // Initial logic
+    loadBots();
+    connectSocket();
+    setInterval(loadBots, 5000); // Auto-refresh table every 5 seconds
+  </script>
 </body>
 </html>
