@@ -10,7 +10,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 app = Flask(__name__)
 
 # Aapka purana Token
-BOT_TOKEN = "8416519129:AAHfVrOHd8V8FUMSCQC3w1NbMKA5sv0qSU8"
+BOT_TOKEN = "8416519129:AAGTP3rS27N0f8H0WcU6fFdg4xja9_MTfAs"
 
 tg_app = None
 
